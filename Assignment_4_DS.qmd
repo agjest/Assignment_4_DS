@@ -79,7 +79,7 @@ Utfra kodene i dsd_gdpkan vi da formulere følgende spørring mot Eurostat:
 # Gross domestic product (GDP) at current market prices by NUTS 3 regions
 # id: nama_10r_3gdp
 nama_10r_3gdp <- get_eurostat_data(
-id = "nama_10r_3gdp",
+id = "nama_10r_3popgdp",
 filters = list(
 geo = c("AT", "DE", "DK", "FR", "EL", "ES",
 "IT", "NL", "BE", "IE", "PL", "PT", "NO", "SE", "FI", "CH"),
@@ -100,3 +100,198 @@ filter(str_length(geo) == 5)
 ```
 
 Oppgave 1)
+
+```{r}
+# id: nama_10r_3gdp
+nama_10r_3gdp <- get_eurostat_data(
+id = "nama_10r_3gdp",
+filters = list(
+geo = c("AT", "DE", "DK", "FR", "EL", "ES",
+"IT", "NL", "BE", "IE", "PL", "PT", "NO", "SE", "FI", "CH"),
+nuts_level = "3",
+unit = "MIO_PPS_EU27_2020"
+),
+exact_match = FALSE,
+date_filter = 2000:2020,
+stringsAsFactors = FALSE
+) |>
+mutate(
+gdp = 1000000 * values
+) |>
+select(-c(unit, values)) |>
+# Vil bare ha NUTS 3 nivå (5 karakterer). Vil aggregere selv til NUTS2,
+# NUTS1 og NUTSc
+filter(str_length(geo) == 5)
+```
+
+Oppgave 2)
+
+i\.
+Fant koden nama_10r_3popgdp for tabellen med forklarende tekst «Average annual population to calculate regional GDP data (thousand persons) by NUTS 3 regions».
+
+ii\.
+
+```{r}
+# ndefineddescription nama_10r_3popgdp
+dsd_popgdp <- get_eurostat_dsd("nama_10r_3popgdp")
+dsd_popgdp |>
+head(n = 15) |>
+flextable() |>
+width(1, width = 1) |>
+width(2, width = 1) |>
+width(3, width = 3.5)
+```
+
+iii\.
+
+```{r}
+# id: nama_10r_3popgdp
+nama_10r_3popgdp <- get_eurostat_data(
+id = "nama_10r_3popgdp",
+filters = list(
+geo = c("AT", "DE", "DK", "FR", "EL", "ES",
+"IT", "NL", "BE", "IE", "PL", "PT", "NO", "SE", "FI", "CH"),
+nuts_level = "3",
+unit = "THS"
+),
+exact_match = FALSE,
+date_filter = 2000:2020,
+stringsAsFactors = FALSE
+) |> mutate(
+pop.x = 1000 * values
+) |>
+select(-c(unit, values)) |>
+# Vil bare ha NUTS 3 nivå (5 karakterer). Vil aggregere selv til NUTS2,
+# NUTS1 og NUTSc
+filter(str_length(geo) == 5)
+```
+
+Oppgave 3)
+
+```{r}
+# description demo_r_pjanaggr3
+   dsd_pop <- get_eurostat_dsd("demo_r_pjanaggr3")
+  dsd_pop |>
+  head(n = 15) |>
+  flextable()  |>
+  width(1, width = 1) |>
+  width(2, width = 1) |>
+  width(3, width = 3.5)
+```
+
+```{r}
+
+demo_r_pjanaggr3 <- get_eurostat_data(
+id = "demo_r_pjanaggr3",
+filters = list(
+geo = c("AT", "DE", "DK", "FR", "EL", "ES",
+"IT", "NL", "BE", "IE", "PL", "PT", "NO", "SE", "FI", "CH"),
+nuts_level = "3",
+unit = "NR", sex = "T", age = "TOTAL"
+),
+exact_match = FALSE,
+date_filter = 2000:2020,
+stringsAsFactors = FALSE
+) |>
+select(-c(unit, sex, age)) |> select(geo, time, pop.y = values) |>
+# Vil bare ha NUTS 3 nivå (5 karakterer). Vil aggregere selv til NUTS2,
+# NUTS1 og NUTSc
+filter(str_length(geo) == 5)
+```
+
+Oppgave 4)
+
+```{r}
+# Identifiser NUTS3-soner som mangler i nama_10r_3gdp
+nuts3_missing_in_demo_r_pjanaggr3 <- setdiff(
+  nama_10r_3popgdp$geo, 
+  demo_r_pjanaggr3$geo
+)
+
+# Vis resultatet
+print(nuts3_missing_in_demo_r_pjanaggr3)
+```
+
+Oppgave 5)
+
+```{r}
+nuts3_missing_in_nama_10r_3gdp <- setdiff(
+  demo_r_pjanaggr3$geo,
+  nama_10r_3popgdp$geo
+  
+)
+
+# Vis resultatet
+print(nuts3_missing_in_nama_10r_3gdp)
+
+```
+
+Oppgave 6)
+
+```{r}
+# Gjenomfører en full_join
+full_pop_nuts3 <- full_join(demo_r_pjanaggr3, nama_10r_3popgdp, by = c("geo", "time"))
+
+# Viser de første radene av det kombinerte datasettet
+head(full_pop_nuts3)
+```
+
+Oppgave 7)
+
+```{r}
+#Sjekker sonene i full_pop_nuts3 mot GDP Tabellen
+Full_pop_nuts3_Against_GDP <- setdiff(
+  full_pop_nuts3$geo,
+  nama_10r_3popgdp$geo
+  
+)
+
+# Vis resultatet
+print(Full_pop_nuts3_Against_GDP)
+```
+
+Oppgave 8)
+
+```{r}
+#Sjekker sonene i gdp tabellen mot de vi har i full_pop_nuts3
+GDP_against_full_pop_nuts3 <- setdiff(
+  nama_10r_3gdp$geo, 
+  full_pop_nuts3$geo
+  
+)
+
+# Vis resultatet
+print(GDP_against_full_pop_nuts3)
+```
+
+oppgave 9)
+
+```{r}
+full_pop_nuts3 |>
+filter(geo %in% c("NO053", "NO060", "NO061")) |>
+filter(time %in% 2014:2020) |>
+arrange(time, geo)
+```
+
+oppgave 10)
+
+```{r}
+full_pop_nuts3 <- full_pop_nuts3 |>
+mutate(
+pop = ifelse(
+test = is.na(pop.x) == TRUE,
+yes = pop.y,
+no = pop.x
+)
+) |>
+select(-pop.x, -pop.y)
+
+```
+
+```{r}
+
+
+
+```
+
+Oppgave 11
