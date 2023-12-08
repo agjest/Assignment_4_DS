@@ -1,0 +1,102 @@
+---
+title: "Assignment 4 DS"
+author: "Marius & Espen"
+format: html
+editor: visual
+language: nb.yaml 
+---
+
+```{r}
+#| label: setup
+#| message: false
+library(tidyverse)
+library(readxl)
+library(restatapi)
+library(DescTools)
+library(ggrepel)
+library(flextable)
+library(modelr)
+library(plm)
+library(broom)
+library(sandwich)
+```
+
+```{r}
+# xml skal ha mer detaljert info
+# toc_xml <- get_eurostat_toc()
+2
+# tekstversjonen har trolig nok info for vårt formål
+toc_txt <- get_eurostat_toc(mode = "txt")
+```
+
+```{r}
+gdp_tabs <- toc_txt |>
+# Regex AND external to regex
+filter(
+str_detect(
+string = title,
+# For å matche både små og store bokstaver
+pattern = '[Gg][Dd][Pp]'
+# AND vha. &
+) &
+str_detect(
+string = title,
+# For å matche både små og store bokstaver og
+# space eller ikke før 3
+pattern = '[Nn][Uu][Tt][Ss]\\s*3'
+)
+) |>
+select(title, code)
+```
+
+Vi finner fire tabeller listet i toc_txt.
+
+```{r}
+gdp_tabs |>
+select(title, code) |>
+flextable() |>
+width(1, width = 3.5) |>
+width(2, width = 1.5)
+
+```
+
+Vi laster så ned «Data Structure Definition (DSD)» for tabellen med code nama_10r_3gdp
+
+```{r}
+# description nama_10r_3gdp
+dsd_gdp <- get_eurostat_dsd("nama_10r_3gdp")
+dsd_gdp |>
+head(n = 15) |>
+flextable() |>
+width(1, width = 1) |>
+width(2, width = 1) |>
+width(3, width = 3.5)
+```
+
+Utfra kodene i dsd_gdpkan vi da formulere følgende spørring mot Eurostat:
+
+```{r}
+# Gross domestic product (GDP) at current market prices by NUTS 3 regions
+# id: nama_10r_3gdp
+nama_10r_3gdp <- get_eurostat_data(
+id = "nama_10r_3gdp",
+filters = list(
+geo = c("AT", "DE", "DK", "FR", "EL", "ES",
+"IT", "NL", "BE", "IE", "PL", "PT", "NO", "SE", "FI", "CH"),
+nuts_level = "3",
+unit = "MIO_PPS_EU27_2020"
+),
+exact_match = FALSE,
+date_filter = 2000:2020,
+stringsAsFactors = FALSE
+) |>
+mutate(
+gdp = 1000000 * values
+) |>
+select(-c(unit, values)) |>
+# Vil bare ha NUTS 3 nivå (5 karakterer). Vil aggregere selv til NUTS2,
+# NUTS1 og NUTSc
+filter(str_length(geo) == 5)
+```
+
+Oppgave 1)
