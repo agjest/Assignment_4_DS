@@ -273,7 +273,7 @@ filter(time %in% 2014:2020) |>
 arrange(time, geo)
 ```
 
-oppgave 10)
+oppgave 10
 
 ```{r}
 full_pop_nuts3 <- full_pop_nuts3 |>
@@ -288,10 +288,242 @@ select(-pop.x, -pop.y)
 
 ```
 
+Oppgave 11
+
 ```{r}
+
+full_pop_nuts3 <- full_pop_nuts3 |>
+  mutate(
+    pop = ifelse(pop == 0, NA, pop)
+  )
+
 
 
 
 ```
 
-Oppgave 11
+Oppgave 12)
+
+```{r}
+
+eu_data <- left_join(nama_10r_3gdp, full_pop_nuts3, by = c("geo", "time"), suffix = c("gdp", "pop"))
+
+```
+
+Dette er feil tall i forhold til Arnstein sitt som er 21159 og 4.
+forsetter men usikker på om dette er rett.
+
+```{r}
+dim(eu_data)
+```
+
+```{r}
+eu_data <- eu_data |>
+mutate(
+country = str_sub(geo, start = 1L, end = 2L)
+)
+
+```
+
+```{r}
+eu_data |>
+distinct(geo, .keep_all = TRUE) |>
+group_by(country) |>
+summarise(Antall = n(), .groups = "drop")
+```
+
+```{r}
+eu_data |>
+summary()
+
+```
+
+OBS!!!
+formelen under fjerner alle datasett, så ikke kjør denne før oppgave 12 ses på.
+
+```{r}
+#Endrer navn og rekkefølge på variabelen i eu_data vha. select().
+eu_data <- eu_data |>
+select(country, NUTS3 = geo, year = time, gdp, pop)
+# Rydder opp
+# Sletter alle objekt utenom eu_data
+# don't use if you don't mean it
+rm(list = setdiff(ls(), "eu_data"))
+
+```
+
+Oppgave 13)
+
+```{r}
+# Beregner GDP per capita
+eu_data <- eu_data %>%
+  mutate(gdp_per_capita = round(gdp / pop, 2))
+```
+
+```{r}
+eu_data |>
+select(gdp_per_capita) |>
+summary()
+
+```
+
+Oppgave 14)
+
+```{r}
+# Legger til variabelen country_name basert på verdiene i "geo"
+eu_data <- eu_data %>%
+  mutate(
+    country_name = case_when(
+      country == "AT" ~ "Østerrike",
+      country == "DE" ~ "Tyskland",
+      country == "DK" ~ "Danmark",
+      country == "FR" ~ "Frankrike",
+      country == "EL" ~ "Hellas",
+      country == "ES" ~ "Spania",
+      country == "IT" ~ "Italia",
+      country == "NL" ~ "Nederland",
+      country == "BE" ~ "Belgia",
+      country == "IE" ~ "Irland",
+      country == "PL" ~ "Polen",
+      country == "PT" ~ "Portugal",
+      country == "NO" ~ "Norge",
+      country == "SE" ~ "Sverige",
+      country == "FI" ~ "Finland",
+      country == "CH" ~ "Sveits",
+      TRUE ~ as.character(country)  # Default: Behold country som country_name hvis ingen betingelser matcher
+    )
+  )
+
+```
+
+Oppgave 15)
+
+```{r}
+# Lager NUTS2, NUTS1, og NUTSc
+eu_data <- eu_data %>%
+  mutate(
+    NUTS2 = str_sub(NUTS3, start = 1, end = 4),
+    NUTS1 = str_sub(NUTS3, start = 1, end = 3),
+    NUTSc = str_sub(NUTS3, start = 1, end = 2)
+  ) %>%
+  # Velger rekkefølge på landene
+  select(country_name, country, year, NUTS3, NUTS2, NUTS1, NUTSc, gdp, pop, gdp_per_capita)
+```
+
+Oppgave 16)
+
+```{r}
+gini_NUTS2 <- eu_data %>%
+  group_by(NUTS2, country_name, country, year) %>%
+  summarise(
+    gini_nuts2 = Gini(
+      x = gdp_per_capita,
+      weights = pop,
+      na.rm = TRUE
+    ),
+    pop = sum(pop, na.rm = TRUE),
+    gdp = sum(gdp, na.rm = TRUE),
+    gdp_per_capita = gdp / pop,
+    num_nuts3 = n(),
+    .groups = "drop"
+  ) %>%
+  select(country_name, country, NUTS2, year, pop, gdp, gdp_per_capita, num_nuts3, gini_nuts2)
+```
+
+```{r}
+gini_NUTS2 |>
+summary() |>
+print(width = 80)
+
+```
+
+```{r}
+gini_NUTS2 |>
+select(-country_name) |>
+filter(gini_nuts2 < 0.001)
+
+```
+
+Oppgave 17)
+
+```{r}
+gini_NUTS1 <- eu_data %>%
+  group_by(NUTS1, country_name, country, year) %>%
+  summarise(
+    gini_nuts1 = Gini(
+      x = gdp_per_capita,
+      weights = pop,
+      na.rm = TRUE
+    ),
+    pop = sum(pop, na.rm = TRUE),
+    gdp = sum(gdp, na.rm = TRUE),
+    gdp_per_capita = gdp / pop,
+    num_nuts2 = n_distinct(NUTS2),
+    .groups = "drop"
+  ) %>%
+  select(country_name, country, NUTS1, year, pop, gdp, gdp_per_capita, num_nuts2, gini_nuts1)
+```
+
+```{r}
+gini_NUTS1 |>
+summary() |>
+print(width = 80)
+
+```
+
+Oppgave 18)
+
+```{r}
+gini_NUTSc <- eu_data %>%
+  group_by(NUTSc, country_name, country, year) %>%
+  summarise(
+    gini_nutsc = Gini(
+      x = gdp_per_capita,
+      weights = pop,
+      na.rm = TRUE
+    ),
+    pop = sum(pop, na.rm = TRUE),
+    gdp = sum(gdp, na.rm = TRUE),
+    gdp_per_capita = gdp / pop,
+    num_nuts1 = n_distinct(NUTS1),
+    .groups = "drop"
+  ) %>%
+  select(country_name, country, NUTSc, year, pop, gdp, gdp_per_capita, num_nuts1, gini_nutsc)
+```
+
+```{r}
+gini_NUTSc |>
+summary() |>
+print(width = 80)
+
+```
+
+Oppgave 19)
+
+```{r}
+gini_NUTS2_nest <- gini_NUTS2 |>
+group_by(country_name, country) |>
+nest(.key = "NUTS2_data") |>
+ungroup()
+
+```
+
+Oppgave 20
+
+```{r}
+gini_NUTS1_nest <- gini_NUTS1 |>
+group_by(country_name, country) |>
+nest(.key = "NUTS1_data") |>
+ungroup()
+
+```
+
+Oppgave 21
+
+```{r}
+gini_NUTSc_nest <- gini_NUTSc |>
+group_by(country_name, country) |>
+nest(.key = "NUTSc_data") |>
+ungroup()
+
+```
