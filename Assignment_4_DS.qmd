@@ -264,6 +264,23 @@ GDP_against_full_pop_nuts3 <- setdiff(
 print(GDP_against_full_pop_nuts3)
 ```
 
+```{r}
+full_pop_nuts3 <- full_pop_nuts3 |> 
+  filter(
+    !str_detect(
+      str_sub(
+        geo, start = 3, end = 5), "ZZZ$"
+      )
+    )
+nama_10r_3gdp <- nama_10r_3gdp |> 
+  filter(
+    !str_detect(
+      str_sub(
+        geo, start = 3, end = 5), "ZZZ$"
+      )
+    )
+```
+
 oppgave 9)
 
 ```{r}
@@ -527,3 +544,127 @@ nest(.key = "NUTSc_data") |>
 ungroup()
 
 ```
+
+Oppgave 22
+
+```{r}
+# Grupper etter land og neste dataene på NUTS3-nivå
+eu_data_nested <- eu_data %>%
+  group_by(country_name, country) %>%
+  nest() %>%
+  rename(NUTS3_data = data) %>%
+  ungroup()
+
+
+gini_NUTS2_nest_unique <- gini_NUTS2_nest %>% 
+  distinct(country_name, country, .keep_all = TRUE)
+gini_NUTS1_nest_unique <- gini_NUTS1_nest %>% 
+  distinct(country_name, country, .keep_all = TRUE)
+gini_NUTSc_nest_unique <- gini_NUTSc_nest %>% 
+  distinct(country_name, country, .keep_all = TRUE)
+
+# Left join med de unike gini-datasettene
+eu_data_nested <- eu_data_nested %>%
+  left_join(gini_NUTS2_nest_unique, by = c("country_name", "country")) %>%
+  left_join(gini_NUTS1_nest_unique, by = c("country_name", "country")) %>%
+  left_join(gini_NUTSc_nest_unique, by = c("country_name", "country"))
+
+# Fjerner gruppestrukturen og eventuelle duplikater
+eu_data_nested <- eu_data_nested %>%
+  ungroup() %>%
+  distinct(country_name, country, .keep_all = TRUE)
+
+# Sjekk strukturen til den endelige dataframen
+print(eu_data_nested)
+```
+
+Oppgave 23
+
+```{r}
+gini_NUTSc |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nutsc,
+      group = country,
+      color = country_name
+    )
+  ) + 
+  geom_line() +
+  labs(title = "Utvikling i Gini-koeffisient på nasjonsnivå",
+       x = "År",
+       y = "Gini-koeffisient") +
+  scale_x_continuous(
+    breaks = seq(
+      min(gini_NUTSc$year), 
+      max(gini_NUTSc$year), 
+      by = 5))
+```
+
+Oppgave 24
+
+```{r}
+eu_data_nested |>
+unnest(NUTSc_data) |>
+filter(year == 2020) |>
+select(country_name, gini_nutsc) |>
+arrange(desc(gini_nutsc)) |>
+flextable() |>
+width(1, width = 1.5) |>
+width(2, width = 1.5)
+```
+
+```{r}
+eu_data_nested %>%
+  unnest(NUTS2_data) %>%
+  filter(country == "IE") %>%
+  filter(year == 2000:2020) %>%
+  select(year, NUTS2, gdp_per_capita, gini_nuts2) %>%
+  arrange(desc(gini_nuts2)) %>%
+  flextable() %>%
+  width(1, width = 1.5) %>%
+  width(2, width = 1.5)
+```
+
+Oppgave 25
+
+```{r}
+eu_data_nested |> 
+  filter(country == "ES") |> 
+  unnest(NUTS2_data) |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nuts2,
+      group = NUTS2,
+      color = NUTS2,
+    )
+  ) +
+  geom_line()
+```
+
+Oppgave 26
+
+Spania
+
+```{r}
+eu_data_nested |> 
+  filter(country == "ES") |> 
+  unnest(NUTS1_data) |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nuts1,
+      group = NUTS1,
+      color = NUTS1,
+    )
+  ) +
+  geom_line() 
+```
+
+Oppgave 27
+
+Det er en stor spredning i ulikheter mellom regionene i Spania.
+Det viser en ujevn fordeling av verdiskapning i landet, og man kan se at rundt halvparten av regionene har en lav positiv utvikling (ulikheter øker i regionen), mens den andre halvparten har avtagende utvikling (mindre ulikheter).
+
+Oppgave 28
