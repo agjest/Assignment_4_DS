@@ -593,12 +593,7 @@ gini_NUTSc |>
   geom_line() +
   labs(title = "Utvikling i Gini-koeffisient på nasjonsnivå",
        x = "År",
-       y = "Gini-koeffisient") +
-  scale_x_continuous(
-    breaks = seq(
-      min(gini_NUTSc$year), 
-      max(gini_NUTSc$year), 
-      by = 5))
+       y = "Gini-koeffisient")
 ```
 
 Oppgave 24
@@ -668,3 +663,248 @@ Det er en stor spredning i ulikheter mellom regionene i Spania.
 Det viser en ujevn fordeling av verdiskapning i landet, og man kan se at rundt halvparten av regionene har en lav positiv utvikling (ulikheter øker i regionen), mens den andre halvparten har avtagende utvikling (mindre ulikheter).
 
 Oppgave 28
+
+```{r}
+# Filtrer på Spania (ES) og NUTS2-nivå
+eu_data_nested |> 
+  unnest(NUTS2_data) |> 
+  filter(country == "ES") |> 
+    ggplot(
+      aes(
+        x = year,
+        y = gdp_per_capita,
+        group = NUTS2,
+        color = NUTS2
+      )
+    ) +
+    geom_line() +
+  labs(title = "Utvikling i GDP per Capita på NUTS2-nivå i Spania",
+       x = "År",
+       y = "GDP per Capita") 
+```
+
+Oppgave 29
+
+```{r}
+eu_data_nested |> 
+  filter(country == "DE") |> 
+  unnest(NUTS2_data) |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nuts2,
+      group = NUTS2,
+      color = NUTS2,
+    )
+  ) +
+  geom_line() 
+```
+
+Oppgave 30
+
+```{r}
+eu_data_nested |> 
+  filter(country == "DE") |> 
+  unnest(NUTS1_data) |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nuts1,
+      group = NUTS1,
+      color = NUTS1,
+    )
+  ) +
+  geom_line() 
+```
+
+Intervallene på NUTS1 nivå er lavere og det er mindre spredning.
+Den avtagende utviklingen er relativt lik.
+
+Oppgave 31
+
+```{r}
+eu_data_nested |> 
+  filter(country == "FR") |> 
+  unnest(NUTS2_data) |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nuts2,
+      group = NUTS2,
+      color = NUTS2,
+    )
+  ) +
+  geom_line() 
+```
+
+Oppgave 32
+
+```{r}
+eu_data_nested |> 
+  filter(country == "FR") |> 
+  unnest(NUTS1_data) |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gini_nuts1,
+      group = NUTS1,
+      color = NUTS1,
+    )
+  ) +
+  geom_line() 
+```
+
+Oppgave 33
+
+Regionen som klart skiller seg ut fra resten er regionen er FR1, hvor Paris (FR101) befinner seg.
+De store ulikhetene tilsier at Paris står for store deler av FR1 sin BNP i forhold til resten av regionen, og dette skaper høy ulikheter i regionen.
+
+Oppgave 34
+
+```{r}
+eu_data_nested |> 
+  filter(country == "FR") |> 
+  unnest(NUTS3_data) |> 
+  filter(NUTS1 == "FR1") |> 
+  ggplot(
+    aes(
+      x = year,
+      y = gdp_per_capita,
+      group = NUTS3,
+      color = NUTS3,
+    )
+  ) +
+  geom_line() 
+```
+
+Oppgave 35
+
+Her ser vi at det vi anntok i oppgave 33 stemmer, FR101 er Paris og denne skiller seg klart ut fra resten, sammen med en annen region.
+
+Oppgave 36
+
+```{r}
+NUTS2_diff <- eu_data_nested |>
+unnest(NUTS2_data) |>
+mutate(
+# Når vi tar diff får vi en obs. mindre. Legger derfor inn en NA først
+# i vektoren
+diff_gdp_per_capita = c(NA, diff(gdp_per_capita)),
+diff_gini_nuts2 = c(NA, diff(gini_nuts2))
+) |>
+select(country_name, country, NUTS2, year, diff_gdp_per_capita, diff_gini_nuts2) %>%
+# Fjerner obs. der vi har NA
+filter(complete.cases(.)) |>
+group_by(country_name, country, NUTS2) |>
+nest(.key = "NUTS2_diff")
+```
+
+Oppgave 37
+
+```{r}
+# Bruk modellen diff_gini_nuts2 ~ diff_gdp_per_capita på hver NUTS2-region
+NUTS2_diff <- NUTS2_diff %>%
+  mutate(modell = map(NUTS2_diff, ~ lm(diff_gini_nuts2 ~ diff_gdp_per_capita, data = .)))
+```
+
+Oppgave 38
+
+```{r}
+NUTS2_diff <- NUTS2_diff |>
+group_by(country_name, country, NUTS2) |>
+mutate(
+mod_coeff = map_df(
+.x = modell,
+.f = coef
+)
+)
+```
+
+Oppgave 39
+
+```{r}
+NUTS2_diff <- NUTS2_diff |>
+group_by(country_name, country, NUTS2) |>
+mutate(
+mod_sum = map_df(
+.x = modell,
+.f = glance
+)
+)
+```
+
+Oppgave 40
+
+```{r}
+NUTS2_diff$mod_coeff |>
+ggplot() +
+geom_density(mapping = aes(x = diff_gdp_per_capita), adjust = 0.6) +
+geom_vline(mapping = aes(xintercept = mean(diff_gdp_per_capita, na.rm = TRUE)),
+colour = "gray60",
+linetype = "dashed")
+```
+
+Oppgave 41
+
+```{r}
+# Antall positive regresjonskoeffisienter
+antall_positive_koef <- sum(NUTS2_diff$modell %>% map_dbl(~ coef(.)["diff_gdp_per_capita"] > 0))
+
+cat("Antall positive regresjonskoeffisienter for diff_gdp_per_capita:", antall_positive_koef, "\n")
+```
+
+Oppgave 42
+
+```{r}
+# Mean av regresjonskoeffisientene for diff_gdp_per_capita
+gjennomsnitt_koef <- mean(NUTS2_diff$mod_coeff$diff_gdp_per_capita)
+print(gjennomsnitt_koef)
+```
+
+Oppgave 43
+
+```{r}
+t.test(NUTS2_diff$mod_coeff$diff_gdp_per_capita, y = NULL,
+       alternative = ("greater"),
+       mu = 0, paired = FALSE, var.equal = FALSE,
+       conf.level = 0.95)
+```
+
+P-verdien er 0.004755, som betyr at den er signifikant på alle nivåer (10%, 5% og 1%).
+Vi kan dermed si at koeffisienten er siginifikant større enn 0.
+
+Oppgave 44
+
+```{r}
+pdata <- eu_data_nested %>%
+  unnest(NUTS2_data) %>%
+  mutate(
+    diff_gdp_per_capita = c(NA, diff(gdp_per_capita)),
+    diff_gini_nuts2 = c(NA, diff(gini_nuts2))
+  ) %>%
+  select(country_name, country, NUTS2, year, diff_gdp_per_capita, diff_gini_nuts2) %>%
+  filter(!is.na(diff_gdp_per_capita))  # Fjern rader med NA-verdier
+
+# Utfør panelregresjon
+p_mod <- plm(diff_gini_nuts2 ~ diff_gdp_per_capita, data = pdata, index = c("NUTS2", "year"), model = "pooling")
+
+```
+
+Oppgave 45
+
+```{r}
+summary(p_mod)
+```
+
+Panelet over viser sammenhengen mellom endringer i BNP per innbygger endringer i Gini-koeffisienten.
+Resultatene viser at økonomisk vekst (diff_gdp_per_capita), har en signifikant positiv sammenheng med endringer i Gini-koeffisienten.
+Koeffisienten for GDPer tilnærmet lik null og p-verdien er lav, og tyder på at økt økonomisk aktivitet har en sammenheng med økninger i inntektsulikheter.
+Modellen forklarer 14.17% av variansen i Gini-koeffisienten.
+
+Oppgave 46
+
+```{r}
+summary(p_mod, vcov = function(x) vcovHC(x, method = "white2"))
+```
+
+Når man benytter vcovHC og lignende, benytter man heteroskadisitisk robuste kovarianser for å forhindre heteroskedastisitet.
