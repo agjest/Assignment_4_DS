@@ -1,0 +1,54 @@
+---
+title: "ag comments"
+format: 
+  html: default
+  pdf: default
+editor: visual
+---
+
+-   Dokumentet var reproduserbart.
+    Flott!
+
+-   Ser dere får 21062 obs for EU data mens jeg har 21159.
+    Årsaken er at dere har fjernet alle ZZZ kategoriene, mens jeg bare har fjernet dem som ikke finnes i gdp-dataene.
+    Jeg har derfor med 21 DKZZZ, 21 ESZZZ, 21 ITZZZ, 21 NLZZ og 13 NOZZZ, dvs totalt 97 soner.
+    Vel så rett å fjerne alle.
+
+-   Oppgave 17-18: Ser at dere finner antall nuts2 soner, jeg finner antall nuts 3 som spenner fra 1 til 96
+
+-   Oppgave 23.
+    Foreslår å jobbe med eu_data_nested og så pakke ut de datene vi trenger.
+    Reduserer antall objekter vi trenger å ha definert og alle data hentes fra samme kilde.
+    Se også bruk av make_date() i pipe før ggplot().
+    Gjør year om fra integer til date slik at ggplot() automatisk velger fornuftige verdier på x-aksen.
+
+-   Oppgave 25: Her bruker dere eu_data_nested som datasett.
+    Flott.
+    La igjen inn en make_date() i pipe for å fikse x-aksen.
+
+-   Oppgave 27: Tja, jeg vil vel helle mot at Spania synes å ha en overraskende jevn fordeling mellom regionene.
+    I år 2000 spenner gini mellom ca.
+    0,05 og 0,10.
+    I 2020 er spennet ca.
+    0,02 til 0,11 mellom NUTS 1 regioner.
+    Alle må selv i 2020 kunne omtales som relativt lave, dvs.
+    relativt jevn fordeling av økonomisk aktivitet innen disse regionene.
+
+-   Oppgave 28: Det er effekten av covid-19 vi ser lengst til høyre i figuren.
+    Flyttet legend til under figuren.
+
+-   Oppgave 29: Her er det så mange soner at jeg vil forslå å droppe legend og fargekoding av linjen.
+    Heller bruke en figure caption til å forklare det generelle bildet.
+
+-   Oppgave 41: Jeg fikk 106.
+    Årsaken er at vi har litt forskjellig datasett (pga. litt forskjellig valg mht. ZZZ sonene)
+
+-   Oppgave 46: «robuste kovarianser for å forhindre heteroskedastisitet» jeg ville nok heller skrevet «robuste kovarianser for å korrigere for heteroskedastisitet».
+    Poenget er at heteroskedastisitet medfører at SE for estimatene blir feil.
+
+-   Flott innsats.
+    Vi hadde litt forskjellige data.
+    Spiller ingen rolle.
+    Få med dere trikset med make_date() i pipe for ggplot().
+
+-   Godkjent.

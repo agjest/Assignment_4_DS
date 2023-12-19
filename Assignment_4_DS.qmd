@@ -73,9 +73,11 @@ width(2, width = 1) |>
 width(3, width = 3.5)
 ```
 
-Utfra kodene i dsd_gdpkan vi da formulere følgende spørring mot Eurostat:
+Utfra kodene i dsd_gdp kan vi da formulere følgende spørring mot Eurostat:
 
 ```{r}
+#| eval: false
+# ag_comment: Satt eval til false ellers kjører samme kode to ganger
 # Gross domestic product (GDP) at current market prices by NUTS 3 regions
 # id: nama_10r_3gdp
 nama_10r_3gdp <- get_eurostat_data(
@@ -180,7 +182,6 @@ Oppgave 3)
 ```
 
 ```{r}
-
 demo_r_pjanaggr3 <- get_eurostat_data(
 id = "demo_r_pjanaggr3",
 filters = list(
@@ -313,17 +314,18 @@ full_pop_nuts3 <- full_pop_nuts3 |>
   mutate(
     pop = ifelse(pop == 0, NA, pop)
   )
-
-
-
-
 ```
 
 Oppgave 12)
 
 ```{r}
 
-eu_data <- left_join(nama_10r_3gdp, full_pop_nuts3, by = c("geo", "time"), suffix = c("gdp", "pop"))
+eu_data <- left_join(
+  nama_10r_3gdp, 
+  full_pop_nuts3, 
+  by = c("geo", "time"), 
+  suffix = c("gdp", "pop")
+  )
 
 ```
 
@@ -522,7 +524,6 @@ gini_NUTS2_nest <- gini_NUTS2 |>
 group_by(country_name, country) |>
 nest(.key = "NUTS2_data") |>
 ungroup()
-
 ```
 
 Oppgave 20
@@ -532,7 +533,6 @@ gini_NUTS1_nest <- gini_NUTS1 |>
 group_by(country_name, country) |>
 nest(.key = "NUTS1_data") |>
 ungroup()
-
 ```
 
 Oppgave 21
@@ -542,7 +542,6 @@ gini_NUTSc_nest <- gini_NUTSc |>
 group_by(country_name, country) |>
 nest(.key = "NUTSc_data") |>
 ungroup()
-
 ```
 
 Oppgave 22
@@ -581,7 +580,17 @@ print(eu_data_nested)
 Oppgave 23
 
 ```{r}
-gini_NUTSc |> 
+# Jeg vil foreslå å heller ta data fra eu_data_nested. Trenger da ikke så mange
+# objekter og det hele blir ryddigere og minsker risikoen for feil
+#gini_NUTSc |>
+eu_data_nested |> 
+  unnest(NUTSc_data) |> 
+  # ag_comment: fikser verdier horisontal akse ved å gjøre year
+  # om fra integer til date. Merk at det bare gjøres i pipen her, så
+  # year er fremdeles integer i eu_data_nested
+  mutate(
+    year = make_date(year)
+  ) |> 
   ggplot(
     aes(
       x = year,
@@ -624,9 +633,11 @@ eu_data_nested %>%
 Oppgave 25
 
 ```{r}
+#| warning: false
 eu_data_nested |> 
   filter(country == "ES") |> 
   unnest(NUTS2_data) |> 
+  mutate(year = make_date(year)) |> 
   ggplot(
     aes(
       x = year,
@@ -645,7 +656,8 @@ Spania
 ```{r}
 eu_data_nested |> 
   filter(country == "ES") |> 
-  unnest(NUTS1_data) |> 
+  unnest(NUTS1_data) |>
+  mutate(year = make_date(year)) |> 
   ggplot(
     aes(
       x = year,
@@ -669,6 +681,7 @@ Oppgave 28
 eu_data_nested |> 
   unnest(NUTS2_data) |> 
   filter(country == "ES") |> 
+  mutate(year = make_date(year)) |> 
     ggplot(
       aes(
         x = year,
@@ -680,32 +693,40 @@ eu_data_nested |>
     geom_line() +
   labs(title = "Utvikling i GDP per Capita på NUTS2-nivå i Spania",
        x = "År",
-       y = "GDP per Capita") 
+       y = "GDP per Capita") + 
+  theme(legend.position = "bottom")
 ```
 
 Oppgave 29
 
 ```{r}
+#| warning: false
+#| label: fig-de-nuts2
+#| fig-cap: "Utviklingen i NUTS 2 gini-koeffisienter over årene 2000 til 2020 i Tyskland. Vi ser en svak negativ tendens, dvs reduksjon i forskjellen mellom NUTS 3 regioner. En NUTS 2 region skiller seg imidlertid klart ut fra dette generelle bildet."
 eu_data_nested |> 
   filter(country == "DE") |> 
   unnest(NUTS2_data) |> 
+  mutate(year = make_date(year)) |> 
   ggplot(
     aes(
       x = year,
       y = gini_nuts2,
-      group = NUTS2,
-      color = NUTS2,
+      group = NUTS2
+      # ag_comment. Droppe fargekoding
+      #color = NUTS2,
     )
   ) +
-  geom_line() 
+  geom_line(show.legend = FALSE)
 ```
 
 Oppgave 30
 
 ```{r}
+#| warning: false
 eu_data_nested |> 
   filter(country == "DE") |> 
   unnest(NUTS1_data) |> 
+  mutate(year = make_date(year)) |> 
   ggplot(
     aes(
       x = year,
@@ -714,7 +735,8 @@ eu_data_nested |>
       color = NUTS1,
     )
   ) +
-  geom_line() 
+  geom_line() +
+  theme(legend.position = "bottom")
 ```
 
 Intervallene på NUTS1 nivå er lavere og det er mindre spredning.
@@ -723,9 +745,11 @@ Den avtagende utviklingen er relativt lik.
 Oppgave 31
 
 ```{r}
+#| warning: false
 eu_data_nested |> 
   filter(country == "FR") |> 
   unnest(NUTS2_data) |> 
+  mutate(year = make_date(year)) |> 
   ggplot(
     aes(
       x = year,
@@ -743,6 +767,7 @@ Oppgave 32
 eu_data_nested |> 
   filter(country == "FR") |> 
   unnest(NUTS1_data) |> 
+  mutate(year = make_date(year)) |> 
   ggplot(
     aes(
       x = year,
@@ -765,6 +790,7 @@ Oppgave 34
 eu_data_nested |> 
   filter(country == "FR") |> 
   unnest(NUTS3_data) |> 
+  mutate(year = make_date(year)) |> 
   filter(NUTS1 == "FR1") |> 
   ggplot(
     aes(
